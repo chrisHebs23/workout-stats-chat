@@ -24,7 +24,20 @@ def run_sql(query: str) -> str:
     Args:
         query: A valid SQL SELECT statement against the workouts table
     """
-    if not query.strip().upper().startswith("SELECT"):
-        raise ValueError("Only SELECT queries are allowed")
-    result = supabase.rpc("execute_sql", {"query": query}).execute()
-    return str(result.data)
+    query = query.strip().rstrip(";").strip()
+    head = query.upper()
+    if not (head.startswith("SELECT") or head.startswith("WITH")):
+        return "ERROR: Only SELECT queries (optionally starting with WITH) are allowed."
+
+    print(f"[run_sql] query: {query}")
+    try:
+        result = supabase.rpc("execute_sql", {"query": query}).execute()
+    except Exception as e:
+        print(f"[run_sql] exception: {e!r}")
+        return f"ERROR: {type(e).__name__}: {e}"
+
+    data = result.data
+    print(f"[run_sql] rows: {len(data) if isinstance(data, list) else 'n/a'}")
+    if data is None:
+        return "ERROR: query returned no data (possible SQL error). Rewrite the query and retry."
+    return str(data)
